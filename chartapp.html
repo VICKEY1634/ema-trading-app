@@ -3,276 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BTC & Gold 200 EMA Live Trading App</title>
+    <title>Dual EMA Live Trading Terminal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #0b0e14; color: #e1e7ef; font-family: sans-serif; }
+        body { background-color: #0b0e14; color: #e1e7ef; font-family: system-ui, -apple-system, sans-serif; user-select: none; }
         .glass-panel { background: rgba(18, 24, 38, 0.95); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        canvas { cursor: crosshair; display: block; }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden">
-    <!-- Top Bar Header -->
+    <!-- Header Controls -->
     <header class="glass-panel px-4 py-3 flex flex-wrap items-center justify-between gap-4 border-b border-gray-800">
-        <div class="flex items-center space-x-3">
-            <div class="p-2 bg-yellow-500/10 text-yellow-500 rounded-lg font-bold text-xl">⚡ 200 EMA TRADER</div>
-            <div class="flex bg-gray-900 rounded-lg p-1 border border-gray-800">
-                <button id="btn-btc" onclick="switchAsset('BTC')" class="px-4 py-1.5 rounded-md font-semibold text-sm transition-all bg-yellow-500 text-black shadow">₿ BTC / USD</button>
-                <button id="btn-gold" onclick="switchAsset('GOLD')" class="px-4 py-1.5 rounded-md font-semibold text-sm transition-all text-gray-400 hover:text-white">🏆 GOLD (XAU)</button>
+        <div class="flex items-center space-x-4">
+            <div class="p-2 bg-indigo-500/10 text-indigo-400 rounded-lg font-bold text-xl flex items-center gap-2">
+                ⚡ <span>EMA Live Terminal</span>
+            </div>
+            
+            <!-- Asset Segment Selector -->
+            <div class="flex items-center space-x-2">
+                <label class="text-xs text-gray-400">Segment:</label>
+                <select id="asset-select" onchange="switchAsset(this.value)" class="bg-gray-900 text-white font-semibold border border-gray-700 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-500">
+                    <optgroup label="Crypto (Live WebSocket)">
+                        <option value="BTCUSDT" selected>₿ BTC / USDT (Live)</option>
+                        <option value="ETHUSDT">Ξ ETH / USDT (Live)</option>
+                    </optgroup>
+                    <optgroup label="Commodities & Forex (Live API)">
+                        <option value="XAUUSD">🏆 Gold (XAU / USD)</option>
+                        <option value="EURUSD">💱 EUR / USD</option>
+                        <option value="GBPUSD">💱 GBP / USD</option>
+                    </optgroup>
+                </select>
             </div>
         </div>
 
+        <!-- Live Price & Dual EMA Display -->
         <div class="flex items-center space-x-6 text-sm">
-            <div class="bg-gray-900 px-3 py-1 rounded border border-gray-800">
-                <span id="asset-label" class="text-gray-400 text-xs mr-1">BTCUSD</span>
-                <span id="live-price" class="font-mono text-xl font-bold text-green-400">$69,450.00</span>
+            <div class="bg-gray-900 px-3 py-1.5 rounded border border-gray-800">
+                <span class="text-gray-400 text-xs block">Live Rate</span>
+                <span id="live-price" class="font-mono text-xl font-bold text-emerald-400">Loading...</span>
             </div>
-            <div class="bg-gray-900 px-3 py-1 rounded border border-gray-800">
-                <span class="text-gray-400 text-xs mr-1">200 EMA:</span>
-                <span id="ema-price" class="font-mono text-xl font-bold text-yellow-400">$68,910.00</span>
-            </div>
-            <div class="flex items-center gap-2">
-                <label class="text-gray-400 text-xs">EMA Period:</label>
-                <input type="number" id="ema-period" value="200" onchange="updateEmaPeriod(this.value)" class="w-16 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-center text-yellow-400 font-bold">
-            </div>
-            <button onclick="playAlertSound()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition-all">⚡ Test Sound</button>
-        </div>
-    </header>
-
-    <!-- Main Workspace -->
-    <main class="flex-1 flex overflow-hidden p-4 gap-4">
-        <div class="flex-1 flex flex-col glass-panel rounded-xl p-3 relative overflow-hidden">
-            <div class="pb-2 border-b border-gray-800 flex justify-between items-center text-xs text-gray-400 mb-2">
-                <span>Chart Indicator: <strong class="text-yellow-400">200 EMA (Amber Line)</strong></span>
-                <span>💡 <i>Mouse Wheel se zoom aur Click & Drag karke chart move kar sakte ho</i></span>
-            </div>
-            <div id="chart-box" class="w-full flex-1 bg-gray-950 rounded-lg overflow-hidden relative min-h-[450px]">
-                <canvas id="tradingCanvas" class="w-full h-full block"></canvas>
-            </div>
-            <div id="alert-banner" class="hidden absolute top-12 left-1/2 transform -translate-x-1/2 bg-red-600 text-white font-bold px-6 py-3 rounded-full shadow-2xl border-2 border-white animate-bounce z-50">
-                <span>🚨 ALERT: Price crossed 200 EMA!</span>
-            </div>
-        </div>
-
-        <!-- Alert Log Side Panel -->
-        <aside class="w-80 glass-panel rounded-xl flex flex-col p-4">
-            <h3 class="font-bold border-b border-gray-800 pb-2 mb-3">🔔 Alert History Log</h3>
-            <div id="alert-history" class="flex-1 overflow-y-auto space-y-2 text-xs font-mono">
-                <div class="text-gray-500 text-center py-4">Wait karein... jab price 200 EMA touch karega tab alerts yahan record honge.</div>
-            </div>
-        </aside>
-    </main>
-
-    <script>
-        let currentAsset = 'BTC';
-        let emaPeriod = 200;
-        let candleData = [];
-        let viewOffset = 0;
-        let isDragging = false;
-        let startX = 0;
-        let lastCrossState = null;
-
-        const canvas = document.getElementById('tradingCanvas');
-        const ctx = canvas.getContext('2d');
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-        function fitCanvas() {
-            const box = document.getElementById('chart-box');
-            if (box) {
-                canvas.width = box.clientWidth || 800;
-                canvas.height = box.clientHeight || 500;
-                drawChart();
-            }
-        }
-
-        function playAlertSound() {
-            try {
-                if (audioCtx.state === 'suspended') audioCtx.resume();
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.3);
-            } catch(e) {}
-        }
-
-        function triggerAlert(type, price, ema) {
-            playAlertSound();
-            const banner = document.getElementById('alert-banner');
-            banner.innerHTML = `🚨 ${currentAsset} ${type === 'ABOVE' ? 'Crossed ABOVE' : 'Crossed BELOW'} 200 EMA @ $${price.toFixed(2)}`;
-            banner.classList.remove('hidden');
-            setTimeout(() => banner.classList.add('hidden'), 4000);
-
-            const history = document.getElementById('alert-history');
-            if (history.children[0]?.innerText.includes('Wait')) history.innerHTML = '';
-            const item = document.createElement('div');
-            item.className = `p-2 rounded border ${type === 'ABOVE' ? 'bg-green-950/40 border-green-800 text-green-300' : 'bg-red-950/40 border-red-800 text-red-300'}`;
-            item.innerHTML = `<strong>${currentAsset} ${type} EMA</strong><br>Price: $${price.toFixed(2)} | EMA: $${ema.toFixed(2)}`;
-            history.prepend(item);
-        }
-
-        function generateCandles(basePrice, count) {
-            let data = [];
-            let price = basePrice;
-            for (let i = 0; i < count; i++) {
-                let open = price + (Math.random() - 0.5) * (basePrice * 0.003);
-                let high = Math.max(open, open + Math.random() * (basePrice * 0.004));
-                let low = Math.min(open, open - Math.random() * (basePrice * 0.004));
-                let close = low + Math.random() * (high - low);
-                data.push({ open, high, low, close });
-                price = close;
-            }
-            return data;
-        }
-
-        function calculateEMA(data, period) {
-            let ema = [];
-            let k = 2 / (period + 1);
-            let prevEMA = data[0] ? data[0].close : 0;
-            for (let i = 0; i < data.length; i++) {
-                prevEMA = (data[i].close * k) + (prevEMA * (1 - k));
-                ema.push(prevEMA);
-            }
-            return ema;
-        }
-
-        function drawChart() {
-            if (!canvas.width || !canvas.height || candleData.length === 0) return;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            const emaValues = calculateEMA(candleData, emaPeriod);
-            const candleWidth = 12;
-            const gap = 4;
-            const step = candleWidth + gap;
-
-            const visibleCount = Math.floor((canvas.width - 60) / step);
-            const endIndex = Math.min(candleData.length, candleData.length - viewOffset);
-            const startIndex = Math.max(0, endIndex - visibleCount);
-
-            const slice = candleData.slice(startIndex, endIndex);
-            const emaSlice = emaValues.slice(startIndex, endIndex);
-
-            if (slice.length === 0) return;
-
-            let minPrice = Math.min(...slice.map(c => c.low));
-            let maxPrice = Math.max(...slice.map(c => c.high));
-            const range = (maxPrice - minPrice) || 1;
-
-            const getY = (val) => canvas.height - 40 - ((val - minPrice) / range) * (canvas.height - 80);
-
-            // Background Gridlines
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
-            ctx.lineWidth = 1;
-            for (let i = 1; i <= 5; i++) {
-                let y = (canvas.height / 5) * i;
-                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
-            }
-
-            // Render Candlesticks
-            slice.forEach((c, idx) => {
-                const x = idx * step + 20;
-                const isGreen = c.close >= c.open;
-                const color = isGreen ? '#22c55e' : '#ef4444';
-
-                // Wick Line
-                ctx.strokeStyle = color;
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(x + candleWidth / 2, getY(c.high));
-                ctx.lineTo(x + candleWidth / 2, getY(c.low));
-                ctx.stroke();
-
-                // Candle Body Box
-                ctx.fillStyle = color;
-                const yOpen = getY(c.open);
-                const yClose = getY(c.close);
-                ctx.fillRect(x, Math.min(yOpen, yClose), candleWidth, Math.abs(yOpen - yClose) || 3);
-            });
-
-            // 200 EMA Amber Yellow Line Overlay
-            ctx.strokeStyle = '#f59e0b';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            emaSlice.forEach((val, idx) => {
-                const x = idx * step + 20 + candleWidth / 2;
-                const y = getY(val);
-                if (idx === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            });
-            ctx.stroke();
-
-            // Header Prices Update
-            const latestPrice = candleData[candleData.length - 1].close;
-            const latestEMA = emaValues[emaValues.length - 1];
-            document.getElementById('live-price').innerText = `$${latestPrice.toFixed(2)}`;
-            document.getElementById('ema-price').innerText = `$${latestEMA.toFixed(2)}`;
-        }
-
-        // Mouse Drag Logic
-        canvas.addEventListener('mousedown', (e) => {
-            isDragging = true;
-            startX = e.clientX;
-        });
-
-        canvas.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            const diffX = e.clientX - startX;
-            if (Math.abs(diffX) > 8) {
-                viewOffset += diffX > 0 ? 1 : -1;
-                viewOffset = Math.max(0, Math.min(candleData.length - 20, viewOffset));
-                startX = e.clientX;
-                drawChart();
-            }
-        });
-
-        window.addEventListener('mouseup', () => isDragging = false);
-        window.addEventListener('resize', fitCanvas);
-
-        // Real-Time Live Tick Updates
-        setInterval(() => {
-            if (!candleData.length) return;
-            let lastCandle = candleData[candleData.length - 1];
-            let delta = (Math.random() - 0.49) * (currentAsset === 'BTC' ? 35 : 1.2);
-            lastCandle.close += delta;
-            lastCandle.high = Math.max(lastCandle.high, lastCandle.close);
-            lastCandle.low = Math.min(lastCandle.low, lastCandle.close);
-
-            const emaValues = calculateEMA(candleData, emaPeriod);
-            const latestEMA = emaValues[emaValues.length - 1];
-
-            if (lastCrossState !== null) {
-                if (lastCrossState === 'BELOW' && lastCandle.close > latestEMA) triggerAlert('ABOVE', lastCandle.close, latestEMA);
-                if (lastCrossState === 'ABOVE' && lastCandle.close < latestEMA) triggerAlert('BELOW', lastCandle.close, latestEMA);
-            }
-            lastCrossState = lastCandle.close >= latestEMA ? 'ABOVE' : 'BELOW';
-
-            drawChart();
-        }, 600);
-
-        function switchAsset(asset) {
-            currentAsset = asset;
-            viewOffset = 0;
-            document.getElementById('asset-label').innerText = asset === 'BTC' ? 'BTCUSD' : 'XAUUSD';
-            document.getElementById('btn-btc').className = asset === 'BTC' ? 'px-4 py-1.5 rounded-md font-semibold text-sm transition-all bg-yellow-500 text-black shadow' : 'px-4 py-1.5 rounded-md font-semibold text-sm transition-all text-gray-400 hover:text-white';
-            document.getElementById('btn-gold').className = asset === 'GOLD' ? 'px-4 py-1.5 rounded-md font-semibold text-sm transition-all bg-yellow-500 text-black shadow' : 'px-4 py-1.5 rounded-md font-semibold text-sm transition-all text-gray-400 hover:text-white';
-
-            let basePrice = asset === 'BTC' ? 69450 : 2740;
-            candleData = generateCandles(basePrice, 300);
-            setTimeout(fitCanvas, 50);
-        }
-
-        function updateEmaPeriod(val) {
-            emaPeriod = parseInt(val) || 200;
-            drawChart();
-        }
-
-        // Initialize App
-        window.onload = () => {
-            switchAsset('BTC');
-        };
-    </script>
-</body>
-</html>
+            <div class="bg
