@@ -1,0 +1,1 @@
+# ema-trading-app
